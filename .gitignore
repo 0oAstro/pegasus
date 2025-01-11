@@ -1,0 +1,5 @@
+.venv
+.envrc
+credentials.json
+.env
+Cache/
