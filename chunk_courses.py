@@ -30,7 +30,7 @@ def extract_prerequisites(text):
     return []
 def extract_overlaps(text):
     """Extract overlapping courses."""
-    overlap_match = re.search(r'Overlaps with:\s*((?:[^\n,]+(?:,\s*)?)+)', text)
+    overlap_match = re.search(r'(Overlaps with|ov\nerlaps with):\s*((?:[^\n,]+(?:,\s*)?)+)', text)
     if overlap_match:
         overlaps = [o.strip() for o in overlap_match.group(1).replace('\n', '').split(',')]
         return overlaps
@@ -60,34 +60,35 @@ def parse_course_catalog(text):
                 catalog[current_course]["overlaps"] = overlaps
 
 
-                description = re.sub(r'Pre-requisite\(s\):.*?\n', '', buffer)
-                description = re.sub(r'Overlaps with:.*?\n', '', description, flags=re.IGNORECASE | re.DOTALL)
+                # description = re.sub(r'Pre-requisite\(s\):.*?\n', '', buffer)
+                # description = re.sub(r'Overlaps with:.*?\n', '', description, flags=re.IGNORECASE | re.DOTALL)
                 # Extract credits and credit structure
                 credit_match = re.search(r'(\d+)\s*Credit[s]?\s*\((\d+-\d+-\d+)\)', buffer)
                 if credit_match:
                     credits = int(credit_match.group(1))
                     credit_structure = credit_match.group(2)
                 # Remove credits and credit structure from description
-                description = re.sub(r'\d+\s*Credits\s*\(\d+-\d+-\d+\)\n', '', description)
+                # description = re.sub(r'\d+\s*Credits\s*\(\d+-\d+-\d+\)\n', '', description)
                 catalog[current_course]["credits"] = credits
                 catalog[current_course]["credit_structure"] = credit_structure
-                catalog[current_course]["description"] = description.strip()
+                catalog[current_course]["description"] = buffer.strip()
 
             # Start a new course
             current_course = course_match.group(0)
-            # Initialize credits and credit structure as None
-            credits = None
-            credit_structure = None
-            catalog[current_course] = {
-                "credits": credits,
-                "credit_structure": credit_structure,
-                "description": "",
-                "overlaps": [],
-                "prereqs": []
-            }
-            print(f"Current Course: {current_course}")
-            buffer = ""
-            continue
+            if len(catalog.get(current_course, [])) == 0:
+                # Initialize credits and credit structure as None
+                credits = None
+                credit_structure = None
+                catalog[current_course] = {
+                    "credits": credits,
+                    "credit_structure": credit_structure,
+                    "description": "",
+                    "overlaps": [],
+                    "prereqs": []
+                }
+                print(f"Current Course: {current_course}")
+                buffer = ""
+                continue
 
         # Add line to buffer for current course
         if current_course:
