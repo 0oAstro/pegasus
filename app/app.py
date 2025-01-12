@@ -294,6 +294,34 @@ def process_course_info(course_data: Dict) -> Dict:
 
     return processed_info
 
+def club_context(query: str) -> str:
+    """Generate context for clubs based on the query."""
+    clubs = {
+        "QC": "Quizzing Club: Participate in quizzes and improve your general knowledge.",
+        "DevClub": "Developer Student Club: Join to work on software development projects and learn new technologies.",
+        "DebSoc": "Debating Society: Engage in debates and improve your public speaking skills.",
+        "PFC": "Photography and Film Club: Learn photography and filmmaking skills, participate in photo walks and film screenings.",
+        "Dance Club": "Dance Club: From classical to contemporary, join to learn and perform various dance forms.",
+        "Vdefyn": "Vdefyn: A club related to dance activities and performances.",
+        "Music Club": "Music Club: Join to explore various genres, participate in concerts, and learn instruments.",
+        "FACC": "Fine Arts and Crafts Club: Engage in arts and crafts activities, participate in exhibitions.",
+        "Lit Club": "Literary Society: Engage in debates, writing competitions, and literary discussions.",
+        "EDC": "Entrepreneurship Development Cell: Join to learn about entrepreneurship, participate in startup events.",
+        "Drama Club": "Drama Club: For all the theatre enthusiasts, participate in plays, skits, and more.",
+        "Hindi Samiti and Spic Macay": "Hindi Samiti and Spic Macay: The maestros of ghazal, participate in cultural events.",
+        "Aries": "AI/ML Club: Explore artificial intelligence and machine learning, work on projects.",
+        "Axl8r": "Formula 1 Club: Join to learn about and participate in Formula 1 related activities.",
+        "Hyperloop": "Hyperloop: Work on building hyperloop technology.",
+        "Robotics Club": "Robotics Club: For tech enthusiasts, work on projects, participate in competitions.",
+        "ANCC": "Coding Club: Improve your competitive programming skills, participate in hackathons and coding competitions.",
+        "PAC": "Physics Astronomy Club: Explore the universe, participate in stargazing events and discussions."
+    }
+    
+    club_related_keywords = "|".join(clubs.keys())
+    if re.search(club_related_keywords, query, re.IGNORECASE):
+        return "\n".join(clubs.values())
+    return "No specific club information found in the query."
+
 def chat(query: str) -> str:
     """Main chat function for IIT-D campus navigator."""
     # Extract and validate course codes with accurate information
@@ -362,12 +390,16 @@ def stream_response(response: str):
         yield word + " "
         time.sleep(0.05)
 
+
+
 def chat_with_history(query: str) -> str:
     """Enhanced chat function that considers conversation history."""
     # Extract and validate course codes with caching
     course_codes = extract_course_codes(query)
     course_info = {}
     invalid_courses = []
+
+    clubs_info = club_context(query)
     
     for code in course_codes:
         # Check cache first
@@ -420,24 +452,11 @@ Guidelines:
 6. Consider conversation history for context
 7. You are not meant to use words like atthi nahli dassi as replacement for bhai
 8. Integrate Gen-Z Lingo
-9. A brief rundown of clubs at IIT Delhi
-- QC: Quizzing club of iit delhi
-- DevClub: Developer student club
-- DebSoc: Debating Society
-- PFC: Photography and Film Club
-- Dance Club: Dance Club
-- Vdefyn: Related to dance
-- Music Club: Music Club
-- FACC: Fine Arts and Crafts Club
-- Lit Club: Literary Society, the literature cookers
-- EDC: Entrepreneurship Development Cell
-- Drama Club: Drama Club
-- Hindi Samiti and Spic Macay: The maestros of ghazal
-- Aries: AI/ML Club
-- Axl8r is the formula 1 club, Hyperloop is building hyperloop, robotics club is known for robotics
+9. Use swear words if the query contains so
 
 Courses found: {list(course_info.keys()) if course_info else "None"}
 Invalid courses: {invalid_courses if invalid_courses else "None"}
+Clubs at IIT Delhi: {clubs_info}
 
 {history_context}
 
