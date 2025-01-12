@@ -1,44 +1,167 @@
-# Campus Navigator Chatbot Project Report
+# IITD Campus Navigator: Vector Search System
+Version 1.0 | January 2025
 
-## Introduction
-The Campus Navigator chatbot is designed to provide users with information about courses offered at IIT Delhi, as well as insights from interviews conducted by the Business Standard Premium (BSP). The project involves several key components, including web scraping, data processing, vector database integration, OCR, and UI development.
+## Overview
 
-## Project Components
+IITD Campus Navigator is a chat-based system that helps users explore and understand life at IIT Delhi. Using vector search and language models, it provides information about:
 
-### 1. Course Information Scraping
-- **Objective**: To gather detailed information about courses of study and courses offered at IIT Delhi.
-- **Method**: Web scraping techniques were employed to extract course data from IIT Delhi's official website.
-- **Outcome**: A comprehensive dataset of courses, including course titles, descriptions, and other relevant details.
+- Academic programs and courses
+- Campus facilities and navigation
+- Student life and experiences
+- Career guidance and opportunities
 
-### 2. Vector Database Integration
-- **Objective**: To store and retrieve course information efficiently.
-- **Method**: Qdrant, a vector similarity search engine, was used to add the scraped course data to a vector database.
-- **Outcome**: Each course was assigned a unique `course_id` based on an MD5 hash, facilitating quick and accurate data retrieval.
+## System Architecture
 
-### 3. Interview Data Processing
-- **Objective**: To analyze and chunk interview data for better understanding and retrieval.
-- **Method**: Interviews were scraped from BSP and then chunked using NLTK's Punkt tokenizer. Gemini was used for further processing.
-- **Outcome**: Structured and chunked interview data, ready for integration and analysis.
+### Core Components
 
-### 4. Data Normalization
-- **Objective**: To ensure consistency and uniformity in the data.
-- **Method**: All scraped and processed data were normalized to maintain a standard format.
-- **Outcome**: Normalized data that is easy to query and retrieve.
+```
+[Streamlit Frontend] <-> [Chat Interface] <-> [Vector Search] <-> [Qdrant]
+                                        |
+                                  [Groq LLM API]
+```
 
-### 5. OCR on Inception PDF
-- **Objective**: To extract textual information from PDF documents related to IIT Delhi.
-- **Method**: Optical Character Recognition (OCR) was performed on the Inception PDF to extract IITD lingo and general information.
-- **Outcome**: Extracted text data that provides insights into IIT Delhi's terminology and general information.
+### Technology Stack
 
-### 6. User Interface Development
-- **Objective**: To create an intuitive and user-friendly interface for interacting with the chatbot.
-- **Method**: Streamlit was used to develop the UI, allowing users to query the chatbot and receive information.
-- **Outcome**: A functional and aesthetically pleasing UI that enhances user experience.
+- Frontend: Streamlit
+- Vector Database: Qdrant
+- Embeddings: SentenceTransformer (all-MiniLM-L6-v2)
+- LLM: Groq API
+- Environment: Poetry, Nix
 
-## Conclusion
-The Campus Navigator chatbot project successfully integrates various technologies to provide a comprehensive solution for accessing course information and interview insights related to IIT Delhi. The use of web scraping, vector databases, data processing, OCR, and UI development ensures that the chatbot is both efficient and user-friendly.
+## Data Sources
 
-## Future Work
-- **Enhancements**: Continuous improvement of the chatbot's capabilities, including more advanced NLP techniques and expanded data sources.
-- **Maintenance**: Regular updates to the course and interview data to ensure accuracy and relevance.
-- **User Feedback**: Incorporating user feedback to refine the chatbot's functionality and UI.
+### Academic Information
+
+1. Course Catalog
+   - Scraped course details
+   - Course codes and names
+   - Credit information
+   - Prerequisites
+   - Course descriptions
+
+2. BSP Academic Resources
+   - Course experiences
+   - Study materials
+   - Academic guidance
+   - Student testimonials
+
+### Inception Magazine Content
+
+The freshers' magazine "Inception" provides:
+- Campus facility descriptions
+- Hostel information
+- Navigation guides
+- First-year experiences
+- Essential campus knowledge
+
+### Dalle United Magazine Content
+
+BSP's "Dalle United" magazine contributes:
+- Student interviews
+- Campus life stories
+- Cultural coverage
+- Academic experiences
+- Career guidance
+
+## Vector Store Implementation
+
+### Data Processing
+
+1. Text Preprocessing
+   - Cleaning and formatting
+   - Context preservation
+   - Campus terminology handling
+
+2. Vector Generation
+   - Text-to-vector conversion
+   - Semantic embedding creation
+   - Context maintenance
+
+3. Collection Structure
+   - Organized by source type
+   - Optimized for retrieval
+   - Contextual relationships preserved
+
+## Development Setup
+
+### Environment Configuration
+
+```bash
+# Initialize development environment
+nix-shell
+poetry install
+
+# Start application
+poetry run streamlit run app.py
+```
+
+### Project Structure
+
+```
+iitd-navigator/
+├── pyproject.toml
+├── poetry.lock
+├── shell.nix
+├── scripts/
+│   ├── scraping/
+│   ├── processing/
+│   └── embedding/
+├── docs/
+└── notebooks/
+```
+
+## Query Processing
+
+### Search Flow
+
+1. Query Analysis
+   - Intent recognition
+   - Context identification
+   - Source prioritization
+
+2. Response Generation
+   - Context-aware answers
+   - Source combination
+   - Natural language output
+
+## Planned Enhancements
+
+### Near-term
+
+1. Content Updates
+   - Regular magazine updates
+   - New course information
+   - Fresh student experiences
+
+2. Search Features
+   - Better context handling
+   - Conversation memory
+   - Multi-topic queries
+
+### Long-term
+
+1. User Experience
+   - Mobile interface
+   - Response speed
+   - Better error handling
+
+2. Data Coverage
+   - More student resources
+   - Additional magazines
+   - Updated course content
+
+## Contributing
+
+To contribute:
+1. Fork the repository
+2. Create a feature branch
+3. Make changes with documentation
+4. Submit a pull request
+
+## License
+
+MIT License. See LICENSE file.
+
+---
+
+*For detailed implementation information, refer to the scripts/ directory and development notebooks.*
