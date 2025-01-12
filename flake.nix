@@ -17,13 +17,18 @@
     in
     {
       devShells = forEachSupportedSystem ({ pkgs }: {
-        default = pkgs.mkShell {
+        default = let
+          gdk = pkgs.google-cloud-sdk.withExtraComponents( with pkgs.google-cloud-sdk.components; [
+            gke-gcloud-auth-plugin
+          ]);
+        in
+        pkgs.mkShell {
           venvDir = ".venv";
           packages = with pkgs; [ poetry python311  ] ++ (with python311Packages; [
             ipykernel
             pip
             venvShellHook
-          ]);
+          ])  ++ [ gdk];
         };
       });
     };
