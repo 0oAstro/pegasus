@@ -11,7 +11,7 @@ from sentence_transformers import SentenceTransformer
 import time
 
 
-model = "llama-3.2-70b-versatile"
+model = "llama-3.3-70b-versatile"
 
 # Initialize clients
 groq = Groq(api_key=st.secrets["GROQ_API_KEY"])
