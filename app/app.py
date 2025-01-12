@@ -1,140 +1,193 @@
-import json
-import time
+import groq
+from typing import List, Dict, Any
+import re
+import hashlib
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance
-import google.generativeai as genai
-from requests.exceptions import Timeout
 import numpy as np
-from scipy.spatial.distance import euclidean, cosine
+from functools import lru_cache
+import logging
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-# Configure Gemini API
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-genai.configure(api_key="AIzaSyANu7IxIk9IhCl7InYKLpJKju_ybh6gOxg")
-
-# Create the model
-generation_config = {
-  "temperature": 1,
-  "top_p": 0.95,
-  "top_k": 40,
-  "max_output_tokens": 8192,
-  "response_mime_type": "text/plain",
-}
-
-gemini_model = genai.GenerativeModel(
-  model_name="gemini-2.0-flash-exp",
-  generation_config=generation_config,
+# Global clients
+qdrant_client = QdrantClient(
+    url = 'https://1b0c0fe7-c332-4414-9ce5-e6e4606d1980.us-east4-0.gcp.cloud.qdrant.io:6333',
+    api_key = os.getenv('QDRANT'),
+    grpc_port=6633
 )
+groq_client = groq.Client(api_key=os.getenv("GROQ_API_KEY"))
+embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
-# Initialize SentenceTransformer model for embedding
-encoder = SentenceTransformer('all-MiniLM-L6-v2') 
-
-# Step 1: Load and parse course data
-with open('final_courses.json') as f:
-    courses_data = json.load(f)
-
-# Extract course names and descriptions
-course_names = list(courses_data.keys())
-course_descriptions = [course['data'] for course in courses_data.values()]
-course_material = [course['study_material'] for course in courses_data.values()]
-# Step 2: Initialize Qdrant client with cloud endpoint and API key
-
-def calculate_cosine_similarity(embedding1, embedding2):
-    return cosine(embedding1, embedding2)
-# Initialize the Qdrant client
-client = QdrantClient(
-    url = 'https://07eb4b7a-96aa-4ce9-b054-6892c56fda54.us-west-2-0.aws.cloud.qdrant.io',
-    api_key = "-8679vHd9oDwK7iZNwCVmnPc1YV-2IIIMyHeQTDxFimIUWdV7buCYA"
-)
-#client = QdrantClient(":memory:")
-study_material_embedding = encoder.encode(["Give me the study material , links course website etc."])[0]
-# Step 6: Query processing function to find similar courses using Qdrant
-def search_courses(user_query, timeout=30):
-    query_normalized = user_query.lower()
-    print(f"Normalized query: '{query_normalized}'")  # Debug print
-
-    queries = query_normalized.split()
-    exact_matches = []
-    for query in queries:
-        exact_matches += [course for course in course_names if query in course.lower()]
-    query_embedding = encoder.encode([user_query])[0]
-    score = calculate_cosine_similarity(study_material_embedding, query_embedding)
-    results = []
-    if exact_matches:
-        for course in exact_matches:
-            idx = course_names.index(course)
-            description = course_descriptions[idx]
-            response = gemini_model.generate_content("Give only the website link of course {} iitd".format(course))
-            description = description + ", the course website : {} , previous year paper links : {}".format(response, " , ".join(course_material[idx]))
-            
-            results.append({
-                "course_name": course,
-                "description": description
-            })
-    else:
-        print("No exact match found. Performing semantic search...")  # Debug print
-        
-        print(f"Query embedding generated: {query_embedding[:10]}...")  # Debug print
-
-        try:
-            search_result = client.query_points(
-                collection_name="Shipathon",
-                query_vector=query_embedding.tolist(),
-                limit=10,
-            ).points
-        except Exception as e:
-            print(f"Timeout during search: {e}")
-            search_result = []
-       
-        for hit in search_result:
-            description= hit.payload['description']
-            idx = course_names.index(hit.payload['course'])
-            
-            response = gemini_model.generate_content("Give only the website link of course {} iitd".format(hit.payload['course_name']))
-            description = description + ", the course website : {} , previous year paper links : {}".format(response, " , ".join(course_material[idx]))
-            results.append({
-                "course_name": hit.payload['course'],
-                "description": description
-            })
-
-    if not results:
-        return [{"course_name": "No relevant course found", "description": "More information about APL100 is needed."}]
-    
-    return results
-def query(prompt):
-  hits = client.query_points(
-    collection_name="Shipathon",
-    query=encoder.encode(prompt).tolist(),
-    limit=10,
-    ).points
-  final_data=""
-  for id,i in enumerate(hits):
-    final_data=final_data+"{}. course code:{} , description:{} \n".format(id+1,i.payload["course"],i.payload["description"])
-  history = [
-    {"role":"user","parts":"suppose the list of courses is\n" +final_data}
-  ]
-
-  chat_session = gemini_model.start_chat(
-    history=history
-  )
-
-  response = chat_session.send_message(prompt)
-
-  return response.text
-# Step 7: Generate response using Gemini
-def generate_response_with_gemini(user_query, courses_info):
-    prompt = f"User query: '{user_query}'\nHere are the top 3 courses that match:\n{courses_info}\nPlease summarize the information and answer the user's query."
-
+@lru_cache(maxsize=100)
+def generate_embedding(text: str) -> List[float]:
+    """Generate and cache embeddings."""
     try:
-        response = gemini_model.generate_content(prompt) 
-        return response.text
-    except Timeout as e:
-        print(f"Timeout during Gemini response generation: {e}")
-        return "The request timed out while generating the response. Please try again."
+        return embedding_model.encode(text).tolist()
     except Exception as e:
-        print(f"Error during Gemini response generation: {e}")
-        return None
+        logger.error(f"Error generating embedding: {e}")
+        return [0] * 384
+
+def normalize_course_code(text: str) -> List[str]:
+    """Extract and normalize course codes."""
+    try:
+        matches = re.finditer(r'([A-Za-z]{3})(\d{3})', text, re.IGNORECASE)
+        return [match.group(0).upper() for match in matches]
+    except Exception as e:
+        logger.error(f"Error normalizing course code: {e}")
+        return []
+
+def get_course_id(course_code: str) -> str:
+    """Generate course ID from course code."""
+    return hashlib.md5(course_code.encode()).hexdigest()
+
+def format_context_with_materials(context: List[Dict]) -> Dict:
+    """Process context and separate study materials."""
+    formatted_context = []
+    all_study_materials = []
+    
+    for item in context:
+        if not hasattr(item, 'payload'):
+            continue
+            
+        payload = item.payload
+        if payload.get('course_code'):
+            study_materials = payload.get('study_material', [])
+            if study_materials:
+                all_study_materials.extend([
+                    {
+                        'course_code': payload.get('course_code'),
+                        'course_name': payload.get('course_name'),
+                        'link': material
+                    } for material in study_materials
+                ])
+            
+            formatted_context.append({
+                'type': 'course',
+                'course_code': payload.get('course_code', ''),
+                'course_name': payload.get('course_name', ''),
+                'prerequisites': payload.get('prerequisites', []),
+                'data': payload.get('data', ''),
+            })
+        elif payload.get('interviewee'):
+            formatted_context.append({
+                'type': 'interview',
+                'content': payload.get('data', '')
+            })
+    
+    return {
+        'context': formatted_context,
+        'study_materials': all_study_materials
+    }
+
+def chat(query: str) -> str:
+    """
+    Main chat function with emphasis on study materials.
+    
+    Args:
+        query: User query
+    Returns:
+        str: Generated response
+    """
+    try:
+        query_embedding = generate_embedding(query)
+        context = []
+        
+        course_codes = normalize_course_code(query)
+        
+        if course_codes:
+            try:
+                course_ids = [get_course_id(code) for code in course_codes]
+                course_results = qdrant_client.retrieve(
+                    collection_name="courses",
+                    ids=course_ids
+                )
+                
+                if course_results:
+                    context.extend(course_results)
+                    
+                    for code in course_codes:
+                        interview_results = qdrant_client.search(
+                            collection_name="interviews",
+                            query_vector=query_embedding,
+                            query_filter={
+                                "must": [
+                                    {"key": "data", "match": {"value": code}}
+                                ]
+                            },
+                            limit=2
+                        )
+                        context.extend(interview_results)
+            except Exception as e:
+                logger.error(f"Error retrieving courses: {e}")
+        
+        if len(context) < 5:
+            try:
+                remaining = 5 - len(context)
+                course_results = qdrant_client.search(
+                    collection_name="courses",
+                    query_vector=query_embedding,
+                    limit=remaining // 2
+                )
+                interview_results = qdrant_client.search(
+                    collection_name="interviews",
+                    query_vector=query_embedding,
+                    limit=remaining - (remaining // 2)
+                )
+                
+                context.extend(course_results)
+                context.extend(interview_results)
+            except Exception as e:
+                logger.error(f"Error in general search: {e}")
+        
+        processed_data = format_context_with_materials(context)
+        
+        if not processed_data['context']:
+            return "I couldn't find relevant information. Could you please rephrase your question or provide more details?"
+        
+        try:
+            # Customize system prompt based on study materials presence
+            system_prompt = """You are a helpful academic assistant. Provide clear, concise responses focusing on course details or other university stuff. If study materials are provided in the context, explicitly mention them as resources for learning, including their links. Structure your response to clearly separate course information from available study materials."""
+            
+            messages = [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": f"""Context: {processed_data['context']}
+                    Study Materials: {processed_data['study_materials']}
+                    
+                    Query: {query}
+                    
+                    Note: If study materials are available, make sure to list them explicitly in your response as learning resources."""
+                }
+            ]
+            
+            response = groq_client.chat.completions.create(
+                messages=messages,
+                model="mixtral-8x7b-32768",
+                temperature=0.7,
+                max_tokens=1024
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            logger.error(f"Error generating response: {e}")
+            return "I encountered an error while generating the response. Please try again."
+            
+    except Exception as e:
+        logger.error(f"Unexpected error in chat function: {e}")
+        return "An unexpected error occurred. Please try again later."
+    
 
 # Example usage
 import streamlit as st
@@ -276,13 +329,8 @@ if user_input:
     st.session_state.chat_history.append({"role": "user", "message": user_input})
     st.markdown(f'<div class="user-message">{user_input}</div>', unsafe_allow_html=True)
 
-    courses_info = search_courses(user_input)
-
-    # Format the courses into a string for the prompt
-    courses_info_str = "\n".join([f"Course: {course['course_name']}\nDescription: {course['description']}" for course in courses_info])
-
     # Generate response using Gemini
-    response = generate_response_with_gemini(user_input, courses_info)
+    response = chat(user_input)
 
     # Generate assistant response
     assistant_response = response  # Replace with AI logic if needed
