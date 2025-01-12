@@ -44,6 +44,7 @@ IITD Campus Navigator is a chat-based system that helps users explore and unders
    - Study materials
    - Academic guidance
    - Student testimonials
+   - Intern Fundae
 
 ### Inception Magazine Content
 
@@ -60,8 +61,6 @@ BSP's "Dalle United" magazine contributes:
 - Student interviews
 - Campus life stories
 - Cultural coverage
-- Academic experiences
-- Career guidance
 
 ## Vector Store Implementation
 
@@ -88,7 +87,7 @@ BSP's "Dalle United" magazine contributes:
 
 ```bash
 # Initialize development environment
-nix-shell
+nix develop
 poetry install
 
 # Start application
@@ -98,16 +97,16 @@ poetry run streamlit run app.py
 ### Project Structure
 
 ```
-iitd-navigator/
-├── pyproject.toml
+pegasus/
+├── LICENSE
+├── README.md
+├── app/app.py
+├── final_courses.json
+├── flake.lock
+├── flake.nix
 ├── poetry.lock
-├── shell.nix
-├── scripts/
-│   ├── scraping/
-│   ├── processing/
-│   └── embedding/
-├── docs/
-└── notebooks/
+├── pyproject.toml
+└── scripts/ (all the misc scripts)
 ```
 
 ## Query Processing
@@ -123,6 +122,7 @@ iitd-navigator/
    - Context-aware answers
    - Source combination
    - Natural language output
+   - Session aware
 
 ## Planned Enhancements
 
@@ -132,11 +132,12 @@ iitd-navigator/
    - Regular magazine updates
    - New course information
    - Fresh student experiences
+   - Add departmental data
 
 2. Search Features
    - Better context handling
-   - Conversation memory
    - Multi-topic queries
+   - Chat history
 
 ### Long-term
 
@@ -144,6 +145,7 @@ iitd-navigator/
    - Mobile interface
    - Response speed
    - Better error handling
+   - Streaming the text generated for a fluid exp
 
 2. Data Coverage
    - More student resources
