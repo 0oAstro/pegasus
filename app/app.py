@@ -10,6 +10,9 @@ from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 import time
 
+
+model = "llama-3.2-70b-versatile"
+
 # Initialize clients
 groq = Groq(api_key=st.secrets["GROQ_API_KEY"])
 client = QdrantClient(
@@ -143,7 +146,7 @@ Consider:
 
     try:
         response = groq.chat.completions.create(
-            model="llama-3.2-90b-vision-preview",
+            model=model,
             messages=[{"role": "user", "content": intent_prompt}],
             temperature=0.1,
             max_tokens=100,
@@ -343,7 +346,7 @@ CONTEXT: {context}"""
 
     try:
         response = groq.chat.completions.create(
-            model="llama-3.2-90b-vision-preview",
+            model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
             max_tokens=1000
@@ -442,7 +445,7 @@ CONTEXT: {context}"""
 
     try:
         response = groq.chat.completions.create(
-            model="llama-3.2-90b-vision-preview",
+            model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
             max_tokens=1000
