@@ -19,7 +19,7 @@
       devShells = forEachSupportedSystem ({ pkgs }: {
         default = pkgs.mkShell {
           venvDir = ".venv";
-          packages = with pkgs; [ poetry python313  ] ++ (with python313Packages; [
+          packages = with pkgs; [ poetry python311  ] ++ (with python311Packages; [
             ipykernel
             pip
             venvShellHook

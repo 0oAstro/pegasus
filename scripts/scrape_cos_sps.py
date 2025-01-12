@@ -2,7 +2,7 @@ import PyPDF2
 import re
 import json
 
-def read_pdf(pdf_path):
+def read_pdf(pdf_path, debug=False):
     """Extract text from PDF file."""
     text = ""
     try:
@@ -10,8 +10,9 @@ def read_pdf(pdf_path):
             pdf_reader = PyPDF2.PdfReader(file)
             for page in pdf_reader.pages:
                 text += page.extract_text() + "\n"
-        with open('pdf_text.txt', 'w', encoding='utf-8') as f:
-            f.write(text)
+        if debug == True:
+            with open('raw_pdf_text_cos.txt', 'w', encoding='utf-8') as f:
+                f.write(text)
     except Exception as e:
         print(f"Error reading PDF: {e}")
         raise
@@ -21,18 +22,41 @@ def remove_page_numbers(text):
     """Remove page numbers from the raw PDF text."""
     return re.sub(r'^\d+\s*$', '', text, flags=re.MULTILINE)
 
+def normalize_overlaps(text):
+    """Normalize 'overlaps with:' to 'Overlaps with:' in the text."""
+    text = re.sub(r'ov\nerlaps with[ ]:', 'Overlaps with:', text, flags=re.IGNORECASE)
+    text = re.sub(r'C\nol', 'COL', text, flags=re.IGNORECASE)
+    text = re.sub(r'EC 50', ',EC50', text, flags=re.IGNORECASE)
+    text = re.sub(r' EC50', ',EC50', text, flags=re.IGNORECASE)
+    return text
+
 def extract_prerequisites(text):
     """Extract prerequisites from text."""
+    text = text.replace('/', ',')
+    text = text.replace('or', ',')
+    text = text.replace('and', ',')
     prereq_match = re.search(r'Pre-requisite\(s\):\s*([^\n]+)', text)
     if prereq_match:
         prereqs = [p.strip() for p in prereq_match.group(1).split(',')]
+
         return prereqs
     return []
 def extract_overlaps(text):
     """Extract overlapping courses."""
-    overlap_match = re.search(r'(Overlaps with|ov\nerlaps with):\s*((?:[^\n,]+(?:,\s*)?)+)', text)
+    text = text.replace('/', ',')
+    overlap_match = re.search(r'Overlaps with:\s*([^\n]+)', text)
     if overlap_match:
-        overlaps = [o.strip() for o in overlap_match.group(1).replace('\n', '').split(',')]
+        overlaps = []
+        for overlap in overlap_match.group(1).replace('\n', '').split(','):
+            overlap = overlap.strip()
+            # Handle cases like XYZ123/ABC123
+            if '/' in overlap:
+                overlaps.extend([o.strip() for o in overlap.split('/')])
+            # Handle cases like COL100 approx 80%
+            elif 'approx' in overlap:
+                overlaps.append(overlap.split('approx')[0].strip())
+            else:
+                overlaps.append(overlap)
         return overlaps
     return []
 
@@ -54,6 +78,7 @@ def parse_course_catalog(text):
         if course_match:
             # Finalize the previous course
             if current_course:
+                buffer = normalize_overlaps(buffer)
                 prereqs = extract_prerequisites(buffer)
                 overlaps = extract_overlaps(buffer)
                 catalog[current_course]["prereqs"] = prereqs
@@ -111,10 +136,13 @@ def main():
     pdf_path = 'Courses of Study 2023-24.pdf'
     try:
         print("Reading PDF file...")
-        pdf_text = read_pdf(pdf_path)
+        pdf_text = read_pdf(pdf_path, debug=True)
 
         print("Removing page numbers...")
         pdf_text = remove_page_numbers(pdf_text)
+
+        print("Normalizing overlaps...")
+        pdf_text = normalize_overlaps(pdf_text)
 
         print("Parsing course information...")
         parsed_catalog = parse_course_catalog(pdf_text)

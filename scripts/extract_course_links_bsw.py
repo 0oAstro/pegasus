@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 
 # Input HTML file and output text file
-html_file = "input.html"  # Replace with your HTML file name
+html_file = "bsw.html"  # Replace with your HTML file name
 output_file = "hyperlinks.txt"
 
 # Read the HTML file
