@@ -472,7 +472,7 @@ CONTEXT: {context}"""
         return response.choices[0].message.content
     except Exception as e:
         print(f"Error in chat completion: {e}")
-        return "I'm having trouble processing your query. Please try again or be more specific."
+        return "I am being rate limited. Ask Shaurya to fix me up."
 
 def main():
     st.title("IITD Campus Navigator 🎓")
