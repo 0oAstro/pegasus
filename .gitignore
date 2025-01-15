@@ -8,3 +8,4 @@ __pycache__/
 scripts/inputs/
 scripts/outputs/
 scripts/add_study_materials/*.txt
+scripts/add_study_materials/*.json
