@@ -139,10 +139,14 @@ Return only a JSON object with the scores in this exact format:
 Query: {query}
 
 Consider:
-- courses: academic courses, study materials, academic questions
-- interviews: internship/placement preparation, career advice
-- inception: campus life, IITD culture, facilities
-- united: social life, relationships, campus social scene"""
+- courses: academic queries, study materials
+- interviews: career guidance, placements
+- inception: IITD culture, campus life
+- united: social interactions, student community
+
+Ensure responses are **concise and to the point** while retaining key details. Avoid excessive elaboration.
+"""
+
 
     try:
         response = groq.chat.completions.create(
